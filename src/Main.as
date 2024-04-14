@@ -26,6 +26,14 @@ float S_lineThickness = 2.0f;
 [Setting category="General" name="Distance based opacity when in round"]
 bool S_opacityWhenNoPlayer = true;
 
+[Setting category="General" name="Minimum opacity when using distance based opacity"]
+float S_minOpacity = 0.1f;
+
+[Setting category="General" name="Max distance for distance based opacity" min="0.0" max="2000.0"]
+float S_maxDistance = 400.0f;
+
+
+
 vec3 playerPos;
 
 void RenderMenu() {
@@ -51,7 +59,7 @@ void onUpdateOrRenderFrame() {
 
     auto playground = cast<CSmArenaClient>(app.CurrentPlayground);
     if (playground is null || playground.Arena.Players.Length == 0) { 
-        playerPos = vec3(6847206875, 6847206875, 6847206875); }
+        playerPos = vec3(6847206875.0f, 6847206875.0f, 6847206875.0f); }
     else { 
     auto script = cast<CSmScriptPlayer>(playground.Arena.Players[0].ScriptAPI);
     playerPos = script.Position;
@@ -121,14 +129,14 @@ void renderLine(const vec3 &in startPos, const vec3 &in endPos, const vec3 &in p
 }
 
 float calculateOpacity(const vec3 &in segmentStart, const vec3 &in segmentEnd, const vec3 &in playerPos) {
-    if (playerPos.x == 6847206875 && playerPos.y == 6847206875 && playerPos.z == 6847206875 && S_opacityWhenNoPlayer) {
+    if (playerPos.x == 6847206875.0f && playerPos.y == 6847206875.0f && playerPos.z == 6847206875.0f && S_opacityWhenNoPlayer) {
         return 0.85f;
     }
 
     vec3 midPoint = (segmentStart + segmentEnd) * 0.5;
     float distance = Math::Distance(midPoint, playerPos);
-    const float maxDistance = 400.0f;
-    const float minOpacity = 0.05f;
+    const float maxDistance = S_maxDistance;
+    const float minOpacity = S_minOpacity;
     float opacity = Math::Max(minOpacity, 1.0f - (distance / maxDistance));
     return opacity;
 }
