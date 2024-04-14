@@ -17,7 +17,7 @@ enum LogLevel {
 };
 
 [Setting category="~DEV" name="Show default OP logs"]
-bool showDefaultLogs = false;
+bool showDefaultLogs = true;
 
 [Setting category="~DEV" name="Show Debug logs"]
 bool showDebugLogs = true;
