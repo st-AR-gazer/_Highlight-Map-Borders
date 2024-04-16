@@ -32,6 +32,16 @@ float S_minOpacity = 0.1f;
 [Setting category="General" name="Max distance for distance based opacity" min="0.0" max="2000.0"]
 float S_maxDistance = 400.0f;
 
+// Optimiation
+[Setting category="General" name="Number of segments per line" min="1" max="100"]
+int S_numSegments = 80;
+
+[Setting category="Optimization" name="Dynamic segment optimization"]
+bool S_dynamicSegmentOptimization = true;
+
+[Setting category="Optimization" name="Segment optimization distance" min="100.0" max="2000.0"]
+float S_optimizationDistance = 1000.0f;
+
 
 
 vec3 playerPos;
@@ -86,10 +96,12 @@ void renderMapBorder(const vec3 &in mapSize, const vec3 &in playerPos) {
     vec4 leftColor = S_useSameColorForAllLines ? S_lineColor : S_leftLineColor;
     vec4 rightColor = S_useSameColorForAllLines ? S_lineColor : S_rightLineColor;
     
-    renderSegmentedLine(bottomLeft, bottomRight, playerPos, bottomColor, 40);
-    renderSegmentedLine(bottomLeft, topLeft, playerPos, leftColor, 40);
-    renderSegmentedLine(topRight, bottomRight, playerPos, rightColor, 40);
-    renderSegmentedLine(topRight, topLeft, playerPos, topColor, 40);
+    int segmentsToUse = calculateDynamicSegments(playerPos, actualMapSize, S_numSegments);
+    
+    renderSegmentedLine(bottomLeft, bottomRight, playerPos, bottomColor, segmentsToUse);
+    renderSegmentedLine(bottomLeft, topLeft, playerPos, leftColor, segmentsToUse);
+    renderSegmentedLine(topRight, bottomRight, playerPos, rightColor, segmentsToUse);
+    renderSegmentedLine(topRight, topLeft, playerPos, topColor, segmentsToUse);
 }
 
 void renderSegmentedLine(const vec3 &in startPos, const vec3 &in endPos, const vec3 &in playerPos, const vec4 &in lineColor, int segments) {
@@ -139,4 +151,25 @@ float calculateOpacity(const vec3 &in segmentStart, const vec3 &in segmentEnd, c
     const float minOpacity = S_minOpacity;
     float opacity = Math::Max(minOpacity, 1.0f - (distance / maxDistance));
     return opacity;
+}
+
+const float USUAL_MAX_WIDTH = 48 * 32;
+const float USUAL_MAX_HEIGHT = 40 * 8;
+const float USUAL_MAX_DEPTH = 48 * 32;
+
+int calculateDynamicSegments(const vec3 &in playerPos, const vec3 &in mapSize, int baseNumSegments) {
+    vec3 centerOfMap = vec3(mapSize.x * 16, mapSize.y * 4, mapSize.z * 16);
+    float playerDistanceToCenter = Math::Distance(playerPos, centerOfMap);
+
+    if (mapSize.x * 32 > USUAL_MAX_WIDTH || mapSize.y * 8 > USUAL_MAX_HEIGHT || mapSize.z * 32 > USUAL_MAX_DEPTH) {
+        return Math::Max(1, baseNumSegments / (int(Math::Ceil(playerDistanceToCenter / S_maxDistance))));
+    } else if (S_dynamicSegmentOptimization) {
+        if (playerDistanceToCenter > S_maxDistance) {
+            return 1;
+        }
+        int reducedSegments = Math::Max(1, baseNumSegments / (int(Math::Ceil(playerDistanceToCenter / S_maxDistance))));
+        return reducedSegments;
+    }
+
+    return baseNumSegments;
 }
