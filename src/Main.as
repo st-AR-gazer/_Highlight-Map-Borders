@@ -2,6 +2,7 @@
 [Setting category="General" name="Render map border lines"]
 bool S_renderLines = true;
 
+// Color / Line Properties
 [Setting category="General" name="Line color" description="RGBA format for color setting"]
 vec4 S_lineColor = vec4(1.f, 0.f, 0.f, 0.7f);
 
@@ -23,36 +24,32 @@ vec4 S_rightLineColor = vec4(1.f, 1.f, 0.f, 0.5f);
 [Setting category="General" name="Line thickness"]
 float S_lineThickness = 2.0f;
 
+// Distance based opacity
 [Setting category="General" name="Distance based opacity when in round"]
 bool S_opacityWhenNoPlayer = true;
 
 [Setting category="General" name="Minimum opacity when using distance based opacity"]
 float S_minOpacity = 0.1f;
 
-[Setting category="General" name="Max distance for distance based opacity" min="0.0" max="2000.0"]
+[Setting category="General" name="Max distance for distance based opacity" min="0.1" max="2000.0"]
 float S_maxDistance = 400.0f;
 
-// Optimiation
-[Setting category="General" name="Number of segments per line" min="1" max="100"]
-int S_numSegments = 80;
+// Segments
+[Setting category="Segments" name="Number of segments" min="1" max="500" description="Number of segments to split each line into. More segments = smoother lines, but more performance impact, most machines can handle at least 500 segments, so that's where I've set the max, but you can override it if you want to by ctrl clicking the setting and typing in a new value manually."]
+int S_numSegments = 100;
 
-[Setting category="Optimization" name="Dynamic segment optimization"]
-bool S_dynamicSegmentOptimization = true;
+// Random color
+[Setting category="Random" name="Use random color for entire lines"]
+bool S_useRandomColorForLines = false;
 
-[Setting category="Optimization" name="Segment optimization distance" min="100.0" max="2000.0"]
-float S_optimizationDistance = 1000.0f;
-
-
+[Setting category="Random" name="Use random colors for segments"]
+bool S_useRandomColorsForSegments = false;
 
 vec3 playerPos;
 
 void RenderMenu() {
     if (UI::MenuItem("\\$2ca" + Icons::SquareO + "\\$z Enable map border lines", "", S_renderLines)) {
-        if (S_renderLines) {
-            S_renderLines = false;
-        } else {
-            S_renderLines = true;
-        }
+        S_renderLines = !S_renderLines;
     }
 }
 
@@ -75,7 +72,6 @@ void onUpdateOrRenderFrame() {
     playerPos = script.Position;
     }
 
-
     auto map = cast<CGameCtnChallenge@>(app.RootMap);
     if (map is null) return;
 
@@ -91,24 +87,23 @@ void renderMapBorder(const vec3 &in mapSize, const vec3 &in playerPos) {
     vec3 topLeft = vec3(0, 8, actualMapSize.z);
     vec3 topRight = actualMapSize;
 
-    vec4 bottomColor = S_useSameColorForAllLines ? S_lineColor : S_bottomLineColor;
-    vec4 topColor = S_useSameColorForAllLines ? S_lineColor : S_topLineColor;
-    vec4 leftColor = S_useSameColorForAllLines ? S_lineColor : S_leftLineColor;
-    vec4 rightColor = S_useSameColorForAllLines ? S_lineColor : S_rightLineColor;
+    vec4 bottomColor = S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_bottomLineColor);
+    vec4 topColor = S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_topLineColor);
+    vec4 leftColor = S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_leftLineColor);
+    vec4 rightColor = S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_rightLineColor);
     
-    int segmentsToUse = calculateDynamicSegments(playerPos, actualMapSize, S_numSegments);
-    
-    renderSegmentedLine(bottomLeft, bottomRight, playerPos, bottomColor, segmentsToUse);
-    renderSegmentedLine(bottomLeft, topLeft, playerPos, leftColor, segmentsToUse);
-    renderSegmentedLine(topRight, bottomRight, playerPos, rightColor, segmentsToUse);
-    renderSegmentedLine(topRight, topLeft, playerPos, topColor, segmentsToUse);
+    renderSegmentedLine(bottomLeft, bottomRight, playerPos, bottomColor, S_numSegments);
+    renderSegmentedLine(bottomLeft, topLeft, playerPos, leftColor, S_numSegments);
+    renderSegmentedLine(topRight, bottomRight, playerPos, rightColor, S_numSegments);
+    renderSegmentedLine(topRight, topLeft, playerPos, topColor, S_numSegments);
 }
 
-void renderSegmentedLine(const vec3 &in startPos, const vec3 &in endPos, const vec3 &in playerPos, const vec4 &in lineColor, int segments) {
+void renderSegmentedLine(const vec3 &in startPos, const vec3 &in endPos, const vec3 &in playerPos, const vec4 &in lineColor, int baseNumSegments) {
     if (!S_renderLines) return;
-    for (int i = 0; i < segments; ++i) {
-        float fraction = float(i) / segments;
-        float nextFraction = float(i + 1) / segments;
+
+    for (int i = 0; i < baseNumSegments; ++i) {
+        float fraction = float(i) / baseNumSegments;
+        float nextFraction = float(i + 1) / baseNumSegments;
         vec3 segmentStart = vec3(
             startPos.x + (endPos.x - startPos.x) * fraction,
             startPos.y + (endPos.y - startPos.y) * fraction,
@@ -123,7 +118,7 @@ void renderSegmentedLine(const vec3 &in startPos, const vec3 &in endPos, const v
     }
 }
 
-void renderLine(const vec3 &in startPos, const vec3 &in endPos, const vec3 &in playerPos, const vec4 &in lineColor) {
+void renderLine(const vec3 &in startPos, const vec3 &in endPos, const vec3 &in playerPos, vec4 &in lineColor) {
     vec3 startScreenPos = Camera::ToScreen(startPos);
     vec3 endScreenPos = Camera::ToScreen(endPos);
     if (startScreenPos.z >= 0 || endScreenPos.z >= 0) return;
@@ -140,6 +135,14 @@ void renderLine(const vec3 &in startPos, const vec3 &in endPos, const vec3 &in p
     nvg::Stroke();
 }
 
+vec4 getRandomColor() {
+    float r = Math::Rand(0.0, 1.0);
+    float g = Math::Rand(0.0, 1.0);
+    float b = Math::Rand(0.0, 1.0);
+    float alpha = S_useSameColorForAllLines ? S_lineColor.w : 1.0;
+    return vec4(r, g, b, alpha);
+}
+
 float calculateOpacity(const vec3 &in segmentStart, const vec3 &in segmentEnd, const vec3 &in playerPos) {
     if (playerPos.x == 6847206875.0f && playerPos.y == 6847206875.0f && playerPos.z == 6847206875.0f && S_opacityWhenNoPlayer) {
         return 0.85f;
@@ -151,25 +154,4 @@ float calculateOpacity(const vec3 &in segmentStart, const vec3 &in segmentEnd, c
     const float minOpacity = S_minOpacity;
     float opacity = Math::Max(minOpacity, 1.0f - (distance / maxDistance));
     return opacity;
-}
-
-const float USUAL_MAX_WIDTH = 48 * 32;
-const float USUAL_MAX_HEIGHT = 40 * 8;
-const float USUAL_MAX_DEPTH = 48 * 32;
-
-int calculateDynamicSegments(const vec3 &in playerPos, const vec3 &in mapSize, int baseNumSegments) {
-    vec3 centerOfMap = vec3(mapSize.x * 16, mapSize.y * 4, mapSize.z * 16);
-    float playerDistanceToCenter = Math::Distance(playerPos, centerOfMap);
-
-    if (mapSize.x * 32 > USUAL_MAX_WIDTH || mapSize.y * 8 > USUAL_MAX_HEIGHT || mapSize.z * 32 > USUAL_MAX_DEPTH) {
-        return Math::Max(1, baseNumSegments / (int(Math::Ceil(playerDistanceToCenter / S_maxDistance))));
-    } else if (S_dynamicSegmentOptimization) {
-        if (playerDistanceToCenter > S_maxDistance) {
-            return 1;
-        }
-        int reducedSegments = Math::Max(1, baseNumSegments / (int(Math::Ceil(playerDistanceToCenter / S_maxDistance))));
-        return reducedSegments;
-    }
-
-    return baseNumSegments;
 }
