@@ -60,7 +60,7 @@ bool S_useRandomColorsForSegments = false;
 bool S_renderExtendedBorder = true;
 
 [Setting category="Extended Border" name="Extended border colors" description="RGBA format for extended border color"]
-vec3 S_extendedBorderColors = vec3(1.f, 0.f, 0.f);
+vec3 S_extendedBorderColor = vec3(1.f, 0.f, 0.f);
 
 [Setting category="Extended Border" name="Extended border opacity" min="0.1" max="1.0"]
 float S_extendedBorderOpacity = 0.3f;
