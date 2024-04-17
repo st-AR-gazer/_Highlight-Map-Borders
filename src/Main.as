@@ -131,7 +131,7 @@ void renderMapBorder(const vec3 &in mapSize, const vec3 &in playerPos) {
         nvg::LineTo(Camera::ToScreen(extendedTopLeft).xy);
         nvg::ClosePath();
 
-        vec4 fillColor = vec4(S_extendedBorderColor + S_extendedBorderOpacity);
+        vec4 fillColor = vec4(S_extendedBorderColor, S_extendedBorderOpacity);
         nvg::FillColor(fillColor);
         nvg::Fill();
     }
