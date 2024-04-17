@@ -1,4 +1,5 @@
 // Settings
+
 [Setting category="General" name="Render map border"]
 bool S_renderBorder = true;
 
@@ -131,6 +132,7 @@ void renderSegmentedLine(const vec3 &in startPos, const vec3 &in endPos, const v
         );
 
         if (S_enableLineOptimization) {
+            S_minOpacity = 0.1f;
             float opacity = calculateOpacity(segmentStart, segmentEnd, playerPos);
             if (opacity > 0.1f) {
                 renderLine(segmentStart, segmentEnd, playerPos, lineColor);
