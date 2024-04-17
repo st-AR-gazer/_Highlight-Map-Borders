@@ -3,7 +3,7 @@
 [Setting category="General" name="Render map border"]
 bool S_renderBorder = true;
 
-[Setting category="General" name="Render map border lines"]
+[Setting category="General" name="Render map border lines" hidden]
 bool S_renderLines = true;
 
 // Color / Line Properties
@@ -29,10 +29,10 @@ vec4 S_rightLineColor = vec4(1.f, 1.f, 0.f, 0.5f);
 float S_lineThickness = 2.0f;
 
 // Distance based opacity
-[Setting category="General" name="Distance based opacity when in round"]
+[Setting category="General" name="Distance based opacity when in round" description="Does not work when line optmization is enabled"]
 bool S_opacityWhenNoPlayer = true;
 
-[Setting category="General" name="Minimum opacity when using distance based opacity"]
+[Setting category="General" name="Minimum opacity when using distance based opacity" min="0.1" max="1.0"]
 float S_minOpacity = 0.1f;
 
 [Setting category="General" name="Max distance for distance based opacity" min="0.1" max="2000.0"]
@@ -40,46 +40,21 @@ float S_maxDistance = 400.0f;
 
 // Optimization
 [Setting category="Optimization" name="Number of segments" min="1" max="500" description="Number of segments to split each line into. More segments = smoother lines, but more performance impact, most machines can 'handle' at least 500 segments, so that's where I've set the max, but you can override it if you want to by ctrl clicking the setting and typing in a new value manually."]
-int S_numSegments = 100;
+int S_numSegments = 150;
 
 [Setting category="Optimization" name="Optimized number of segments" min="1" max="500" description="Number of segments to split each line into when player is far away"]
-int S_optimizedNumSegments = 4;
+int S_optimizedNumSegments = 150;
 
 [Setting category="Optimization" name="Enable line optimization" description="Enable optimized rendering for distant lines"]
 bool S_enableLineOptimization = true;
 
-[Setting category="Optimization" name="Distance threshold for optimization" min="100.0" max="2000.0" description="Distance at which line segment reduction starts"]
-float S_optimizationThreshold = 800.0f;
+[Setting category="Optimization" name="Distance threshold for optimization" min="100.0" max="2000.0" description="Distance at which line segment reduction starts" hidden]
+float S_optimizationThreshold = S_maxDistance;
 
 
 // Random color
-[Setting category="Random" name="Use random color for entire lines"]
+[Setting category="Random" name="Use random color for entire lines (epelepsy warning)"]
 bool S_useRandomColorForLines = false;
-
-[Setting category="Random" name="Use random colors for segments"]
-bool S_useRandomColorsForSegments = false;
-
-// Extended border
-[Setting category="Extended Border" name="Render extended border"]
-bool S_renderExtendedBorder = true;
-
-[Setting category="Extended Border" name="Extend border outward" description="Extend the border outward from the map boundaries"]
-bool S_extendBorderOutward = true;
-
-[Setting category="Extended Border" name="Extended border colors" description="RGB format for extended border color"]
-vec3 S_extendedBorderColor = vec3(1.f, 0.f, 0.f);
-
-[Setting category="Extended Border" name="Extended border opacity" min="0.1" max="1.0"]
-float S_extendedBorderOpacity = 0.3f;
-
-
-[Setting category="Extended Border" name="(Optimization?) Tile size" min="1" max="100" description="Size of each tile in units"]
-int S_tileSize = 32;
-
-[Setting category="Extended Border" name="(Optimization?) Extended border size" min="1" max="200" description="Size in units to extend the border outward"]
-int S_extendedBorderSize = 32;
-
-
 
 
 vec3 playerPos;
@@ -119,38 +94,18 @@ void onUpdateOrRenderFrame() {
 void renderMapBorder(const vec3 &in mapSize, const vec3 &in playerPos) {
     if (!S_renderBorder) return;
 
-    vec3 actualMapSize = vec3(mapSize.x * S_tileSize, 8, mapSize.z * S_tileSize);
+    vec3 actualMapSize = vec3(mapSize.x * 32, 8, mapSize.z * 32);
 
-    vec3 bottomLeft =  vec3(0, 8, 0);
+    vec3 bottomLeft = vec3(0, 8, 0);
     vec3 bottomRight = vec3(actualMapSize.x, 8, 0);
-    vec3 topLeft =     vec3(0, 8, actualMapSize.z);
-    vec3 topRight =    actualMapSize;
-
-    int borderAdjustment = S_extendBorderOutward ? S_extendedBorderSize : -S_extendedBorderSize;
-
-    vec3 extendedBottomLeft =  vec3(bottomLeft.x - borderAdjustment, 8, bottomLeft.z - borderAdjustment);
-    vec3 extendedBottomRight = vec3(bottomRight.x + borderAdjustment, 8, bottomRight.z - borderAdjustment);
-    vec3 extendedTopLeft =     vec3(topLeft.x - borderAdjustment, 8, topLeft.z + borderAdjustment);
-    vec3 extendedTopRight =    vec3(topRight.x + borderAdjustment, 8, topRight.z + borderAdjustment);
+    vec3 topLeft = vec3(0, 8, actualMapSize.z);
+    vec3 topRight = actualMapSize;
 
     if (S_renderLines) {
         renderSegmentedLine(bottomLeft, bottomRight, playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_bottomLineColor), S_numSegments);
         renderSegmentedLine(bottomLeft, topLeft,     playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_leftLineColor), S_numSegments);
         renderSegmentedLine(topRight,   bottomRight, playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_rightLineColor), S_numSegments);
         renderSegmentedLine(topRight,   topLeft,     playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_topLineColor), S_numSegments);
-    }
-
-    if (S_renderExtendedBorder) {
-        nvg::BeginPath();
-        nvg::MoveTo(Camera::ToScreen(extendedBottomLeft).xy);
-        nvg::LineTo(Camera::ToScreen(extendedBottomRight).xy);
-        nvg::LineTo(Camera::ToScreen(extendedTopRight).xy);
-        nvg::LineTo(Camera::ToScreen(extendedTopLeft).xy);
-        nvg::ClosePath();
-
-        vec4 fillColor = vec4(S_extendedBorderColor.x, S_extendedBorderColor.y, S_extendedBorderColor.z, S_extendedBorderOpacity);
-        nvg::FillColor(fillColor);
-        nvg::Fill();
     }
 }
 
