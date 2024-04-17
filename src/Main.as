@@ -1,4 +1,8 @@
 // Settings
+
+[Setting category="General" name="Render map border"]
+bool S_renderBorder = true;
+
 [Setting category="General" name="Render map border lines"]
 bool S_renderLines = true;
 
@@ -59,19 +63,30 @@ bool S_useRandomColorsForSegments = false;
 [Setting category="Extended Border" name="Render extended border"]
 bool S_renderExtendedBorder = true;
 
-[Setting category="Extended Border" name="Extended border colors" description="RGBA format for extended border color"]
+[Setting category="Extended Border" name="Extend border outward" description="Extend the border outward from the map boundaries"]
+bool S_extendBorderOutward = true;
+
+[Setting category="Extended Border" name="Extended border colors" description="RGB format for extended border color"]
 vec3 S_extendedBorderColor = vec3(1.f, 0.f, 0.f);
 
 [Setting category="Extended Border" name="Extended border opacity" min="0.1" max="1.0"]
 float S_extendedBorderOpacity = 0.3f;
 
 
+[Setting category="Extended Border" name="(Optimization?) Tile size" min="1" max="100" description="Size of each tile in units"]
+int S_tileSize = 32;
+
+[Setting category="Extended Border" name="(Optimization?) Extended border size" min="1" max="200" description="Size in units to extend the border outward"]
+int S_extendedBorderSize = 32;
+
+
+
 
 vec3 playerPos;
 
 void RenderMenu() {
-    if (UI::MenuItem("\\$2ca" + Icons::SquareO + "\\$z Enable map border lines", "", S_renderLines)) {
-        S_renderLines = !S_renderLines;
+    if (UI::MenuItem("\\$2ca" + Icons::SquareO + "\\$z Enable map border lines", "", S_renderBorder)) {
+        S_renderBorder = !S_renderBorder;
     }
 }
 
@@ -102,25 +117,27 @@ void onUpdateOrRenderFrame() {
 }
 
 void renderMapBorder(const vec3 &in mapSize, const vec3 &in playerPos) {
-    vec3 actualMapSize = vec3(mapSize.x * 32, 8, mapSize.z * 32);
+    if (!S_renderBorder) return;
 
-    // Extended border dimensions
-    vec3 extendedBottomLeft =  vec3(-32, 8, -32);
-    vec3 extendedBottomRight = vec3(actualMapSize.x + 32, 8, -32);
-    vec3 extendedTopLeft =     vec3(-32, 8, actualMapSize.z + 32);
-    vec3 extendedTopRight =    actualMapSize + vec3(32, 0, 32);
+    vec3 actualMapSize = vec3(mapSize.x * S_tileSize, 8, mapSize.z * S_tileSize);
 
-    // Original map border lines
     vec3 bottomLeft =  vec3(0, 8, 0);
     vec3 bottomRight = vec3(actualMapSize.x, 8, 0);
     vec3 topLeft =     vec3(0, 8, actualMapSize.z);
     vec3 topRight =    actualMapSize;
 
-    if (!S_renderLines) {
+    int borderAdjustment = S_extendBorderOutward ? S_extendedBorderSize : -S_extendedBorderSize;
+
+    vec3 extendedBottomLeft =  vec3(bottomLeft.x - borderAdjustment, 8, bottomLeft.z - borderAdjustment);
+    vec3 extendedBottomRight = vec3(bottomRight.x + borderAdjustment, 8, bottomRight.z - borderAdjustment);
+    vec3 extendedTopLeft =     vec3(topLeft.x - borderAdjustment, 8, topLeft.z + borderAdjustment);
+    vec3 extendedTopRight =    vec3(topRight.x + borderAdjustment, 8, topRight.z + borderAdjustment);
+
+    if (S_renderLines) {
         renderSegmentedLine(bottomLeft, bottomRight, playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_bottomLineColor), S_numSegments);
-        renderSegmentedLine(bottomLeft, topLeft,     playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_leftLineColor),   S_numSegments);
-        renderSegmentedLine(topRight,   bottomRight, playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_rightLineColor),  S_numSegments);
-        renderSegmentedLine(topRight,   topLeft,     playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_topLineColor),    S_numSegments);
+        renderSegmentedLine(bottomLeft, topLeft,     playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_leftLineColor), S_numSegments);
+        renderSegmentedLine(topRight,   bottomRight, playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_rightLineColor), S_numSegments);
+        renderSegmentedLine(topRight,   topLeft,     playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_topLineColor), S_numSegments);
     }
 
     if (S_renderExtendedBorder) {
@@ -131,12 +148,11 @@ void renderMapBorder(const vec3 &in mapSize, const vec3 &in playerPos) {
         nvg::LineTo(Camera::ToScreen(extendedTopLeft).xy);
         nvg::ClosePath();
 
-        vec4 fillColor = vec4(S_extendedBorderColor, S_extendedBorderOpacity);
+        vec4 fillColor = vec4(S_extendedBorderColor.x, S_extendedBorderColor.y, S_extendedBorderColor.z, S_extendedBorderOpacity);
         nvg::FillColor(fillColor);
         nvg::Fill();
     }
 }
-
 
 void renderSegmentedLine(const vec3 &in startPos, const vec3 &in endPos, const vec3 &in playerPos, const vec4 &in lineColor, int baseNumSegments) {
     int segmentsToRender = baseNumSegments;
