@@ -55,7 +55,15 @@ bool S_useRandomColorForLines = false;
 [Setting category="Random" name="Use random colors for segments"]
 bool S_useRandomColorsForSegments = false;
 
+// Extended border
+[Setting category="Extended Border" name="Render extended border"]
+bool S_renderExtendedBorder = true;
 
+[Setting category="Extended Border" name="Extended border colors" description="RGBA format for extended border color"]
+vec3 S_extendedBorderColors = vec4(1.f, 0.f, 0.f);
+
+[Setting category="Extended Border" name="Extended border opacity" min="0.1" max="1.0"]
+float S_extendedBorderOpacity = 0.3f;
 
 
 
@@ -96,16 +104,28 @@ void onUpdateOrRenderFrame() {
 void renderMapBorder(const vec3 &in mapSize, const vec3 &in playerPos) {
     vec3 actualMapSize = vec3(mapSize.x * 32, 8, mapSize.z * 32);
 
+    // Calculate extended border positions
+    vec3 extendedBottomLeft =  vec3(-32, 8, -32);
+    vec3 extendedBottomRight = vec3(actualMapSize.x + 32, 8, -32);
+    vec3 extendedTopLeft =     vec3(-32, 8, actualMapSize.z + 32);
+    vec3 extendedTopRight =    actualMapSize + vec3(32, 0, 32);
+
+    // Original map border lines
     vec3 bottomLeft =  vec3(0, 8, 0);
     vec3 bottomRight = vec3(actualMapSize.x, 8, 0);
     vec3 topLeft =     vec3(0, 8, actualMapSize.z);
     vec3 topRight =    actualMapSize;
 
-    vec4 bottomColor = S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_bottomLineColor);
-    vec4 topColor =    S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_topLineColor);
-    vec4 leftColor =   S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_leftLineColor);
-    vec4 rightColor =  S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_rightLineColor);
-    
+    vec4 lineColor = S_useRandomColorForLines ? getRandomColor() : S_lineColor;
+
+    if (S_renderExtendedBorder) {
+        vec4 extendedColor = vec4(S_extendedBorderColors, S_extendedBorderOpacity);
+        renderSegmentedLine(extendedBottomLeft, extendedBottomRight, playerPos, extendedColor, 4);
+        renderSegmentedLine(extendedBottomLeft, extendedTopLeft,     playerPos, extendedColor, 4);
+        renderSegmentedLine(extendedTopRight,   extendedBottomRight, playerPos, extendedColor, 4);
+        renderSegmentedLine(extendedTopRight,   extendedTopLeft,     playerPos, extendedColor, 4);
+    }
+
     renderSegmentedLine(bottomLeft, bottomRight, playerPos, bottomColor, S_numSegments);
     renderSegmentedLine(bottomLeft, topLeft,     playerPos, leftColor,   S_numSegments);
     renderSegmentedLine(topRight,   bottomRight, playerPos, rightColor,  S_numSegments);
