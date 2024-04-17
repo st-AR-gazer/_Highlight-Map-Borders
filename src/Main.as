@@ -1,5 +1,4 @@
 // Settings
-
 [Setting category="General" name="Render map border"]
 bool S_renderBorder = true;
 
