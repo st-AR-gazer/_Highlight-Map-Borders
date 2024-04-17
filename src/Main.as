@@ -36,7 +36,7 @@ bool S_opacityWhenNoPlayer = true;
 float S_minOpacity = 0.1f;
 
 [Setting category="General" name="Max distance for distance based opacity" min="0.1" max="2000.0"]
-float S_maxDistance = 400.0f;
+float S_maxDistance = 600.0f;
 
 // Optimization
 [Setting category="Optimization" name="Number of segments" min="1" max="500" description="Number of segments to split each line into. More segments = smoother lines, but more performance impact, most machines can 'handle' at least 500 segments, so that's where I've set the max, but you can override it if you want to by ctrl clicking the setting and typing in a new value manually."]
