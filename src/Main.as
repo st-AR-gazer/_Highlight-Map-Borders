@@ -34,9 +34,16 @@ float S_minOpacity = 0.1f;
 [Setting category="General" name="Max distance for distance based opacity" min="0.1" max="2000.0"]
 float S_maxDistance = 400.0f;
 
-// Segments
-[Setting category="Segments" name="Number of segments" min="1" max="500" description="Number of segments to split each line into. More segments = smoother lines, but more performance impact, most machines can handle at least 500 segments, so that's where I've set the max, but you can override it if you want to by ctrl clicking the setting and typing in a new value manually."]
+// Optimization
+[Setting category="Optimization" name="Number of segments" min="1" max="500" description="Number of segments to split each line into. More segments = smoother lines, but more performance impact, most machines can 'handle' at least 500 segments, so that's where I've set the max, but you can override it if you want to by ctrl clicking the setting and typing in a new value manually."]
 int S_numSegments = 100;
+
+[Setting category="Optimization" name="Enable line optimization" description="Enable optimized rendering for distant lines"]
+bool S_enableLineOptimization = true;
+
+[Setting category="Optimization" name="Distance threshold for optimization" min="100.0" max="2000.0" description="Distance at which line segment reduction starts"]
+float S_optimizationThreshold = 800.0f;
+
 
 // Random color
 [Setting category="Random" name="Use random color for entire lines"]
@@ -44,6 +51,10 @@ bool S_useRandomColorForLines = false;
 
 [Setting category="Random" name="Use random colors for segments"]
 bool S_useRandomColorsForSegments = false;
+
+
+
+
 
 vec3 playerPos;
 
@@ -82,28 +93,36 @@ void onUpdateOrRenderFrame() {
 void renderMapBorder(const vec3 &in mapSize, const vec3 &in playerPos) {
     vec3 actualMapSize = vec3(mapSize.x * 32, 8, mapSize.z * 32);
 
-    vec3 bottomLeft = vec3(0, 8, 0);
+    vec3 bottomLeft =  vec3(0, 8, 0);
     vec3 bottomRight = vec3(actualMapSize.x, 8, 0);
-    vec3 topLeft = vec3(0, 8, actualMapSize.z);
-    vec3 topRight = actualMapSize;
+    vec3 topLeft =     vec3(0, 8, actualMapSize.z);
+    vec3 topRight =    actualMapSize;
 
     vec4 bottomColor = S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_bottomLineColor);
-    vec4 topColor = S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_topLineColor);
-    vec4 leftColor = S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_leftLineColor);
-    vec4 rightColor = S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_rightLineColor);
+    vec4 topColor =    S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_topLineColor);
+    vec4 leftColor =   S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_leftLineColor);
+    vec4 rightColor =  S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_rightLineColor);
     
     renderSegmentedLine(bottomLeft, bottomRight, playerPos, bottomColor, S_numSegments);
-    renderSegmentedLine(bottomLeft, topLeft, playerPos, leftColor, S_numSegments);
-    renderSegmentedLine(topRight, bottomRight, playerPos, rightColor, S_numSegments);
-    renderSegmentedLine(topRight, topLeft, playerPos, topColor, S_numSegments);
+    renderSegmentedLine(bottomLeft, topLeft,     playerPos, leftColor,   S_numSegments);
+    renderSegmentedLine(topRight,   bottomRight, playerPos, rightColor,  S_numSegments);
+    renderSegmentedLine(topRight,   topLeft,     playerPos, topColor,    S_numSegments);
 }
 
 void renderSegmentedLine(const vec3 &in startPos, const vec3 &in endPos, const vec3 &in playerPos, const vec4 &in lineColor, int baseNumSegments) {
     if (!S_renderLines) return;
 
-    for (int i = 0; i < baseNumSegments; ++i) {
-        float fraction = float(i) / baseNumSegments;
-        float nextFraction = float(i + 1) / baseNumSegments;
+    float totalDistance = Math::Distance(startPos, endPos);
+    float playerDistance = Math::Distance((startPos + endPos) * 0.5, playerPos);
+    int segmentsToRender = baseNumSegments;
+
+    if (playerDistance > S_maxDistance * 0.5) {
+        segmentsToRender = 4;
+    }
+
+    for (int i = 0; i < segmentsToRender; ++i) {
+        float fraction = float(i) / segmentsToRender;
+        float nextFraction = float(i + 1) / segmentsToRender;
         vec3 segmentStart = vec3(
             startPos.x + (endPos.x - startPos.x) * fraction,
             startPos.y + (endPos.y - startPos.y) * fraction,
@@ -114,9 +133,14 @@ void renderSegmentedLine(const vec3 &in startPos, const vec3 &in endPos, const v
             startPos.y + (endPos.y - startPos.y) * nextFraction,
             startPos.z + (endPos.z - startPos.z) * nextFraction
         );
-        renderLine(segmentStart, segmentEnd, playerPos, lineColor);
+
+        float opacity = calculateOpacity(segmentStart, segmentEnd, playerPos);
+        if (opacity > 0.1f) {
+            renderLine(segmentStart, segmentEnd, playerPos, lineColor);
+        }
     }
 }
+
 
 void renderLine(const vec3 &in startPos, const vec3 &in endPos, const vec3 &in playerPos, vec4 &in lineColor) {
     vec3 startScreenPos = Camera::ToScreen(startPos);
