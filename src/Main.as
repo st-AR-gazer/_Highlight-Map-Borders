@@ -38,6 +38,9 @@ float S_maxDistance = 400.0f;
 [Setting category="Optimization" name="Number of segments" min="1" max="500" description="Number of segments to split each line into. More segments = smoother lines, but more performance impact, most machines can 'handle' at least 500 segments, so that's where I've set the max, but you can override it if you want to by ctrl clicking the setting and typing in a new value manually."]
 int S_numSegments = 100;
 
+[Setting category="Optimization" name="Optimized number of segments" min="1" max="500" description="Number of segments to split each line into when player is far away"]
+int S_optimizedNumSegments = 4;
+
 [Setting category="Optimization" name="Enable line optimization" description="Enable optimized rendering for distant lines"]
 bool S_enableLineOptimization = true;
 
@@ -112,12 +115,11 @@ void renderMapBorder(const vec3 &in mapSize, const vec3 &in playerPos) {
 void renderSegmentedLine(const vec3 &in startPos, const vec3 &in endPos, const vec3 &in playerPos, const vec4 &in lineColor, int baseNumSegments) {
     if (!S_renderLines) return;
 
-    float totalDistance = Math::Distance(startPos, endPos);
-    float playerDistance = Math::Distance((startPos + endPos) * 0.5, playerPos);
     int segmentsToRender = baseNumSegments;
+    float playerDistance = Math::Distance((startPos + endPos) * 0.5, playerPos);
 
-    if (playerDistance > S_maxDistance * 0.5) {
-        segmentsToRender = 4;
+    if (S_enableLineOptimization && playerDistance > S_optimizationThreshold) {
+        segmentsToRender = S_optimizedNumSegments;
     }
 
     for (int i = 0; i < segmentsToRender; ++i) {
@@ -134,13 +136,16 @@ void renderSegmentedLine(const vec3 &in startPos, const vec3 &in endPos, const v
             startPos.z + (endPos.z - startPos.z) * nextFraction
         );
 
-        float opacity = calculateOpacity(segmentStart, segmentEnd, playerPos);
-        if (opacity > 0.1f) {
+        if (S_enableLineOptimization) {
+            float opacity = calculateOpacity(segmentStart, segmentEnd, playerPos);
+            if (opacity > 0.1f) {
+                renderLine(segmentStart, segmentEnd, playerPos, lineColor);
+            }
+        } else {
             renderLine(segmentStart, segmentEnd, playerPos, lineColor);
         }
     }
 }
-
 
 void renderLine(const vec3 &in startPos, const vec3 &in endPos, const vec3 &in playerPos, vec4 &in lineColor) {
     vec3 startScreenPos = Camera::ToScreen(startPos);
