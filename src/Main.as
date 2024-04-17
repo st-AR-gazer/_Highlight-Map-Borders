@@ -66,6 +66,9 @@ bool S_renderExtendedBorder = true;
 [Setting category="Extended Border" name="Extend border outward" description="Extend the border outward from the map boundaries"]
 bool S_extendBorderOutward = true;
 
+[Setting category="Extended Border total steps" name="Step" min="1" max="10" description="Step for the number of tiles per side, 2^step = number of tiles per side"]
+int step = 4;
+
 [Setting category="Extended Border" name="Extended border colors" description="RGB format for extended border color"]
 vec3 S_extendedBorderColor = vec3(1.f, 0.f, 0.f);
 
@@ -78,7 +81,6 @@ int S_tileSize = 32;
 
 [Setting category="Extended Border" name="(Optimization?) Extended border size" min="1" max="200" description="Size in units to extend the border outward"]
 int S_extendedBorderSize = 32;
-
 
 
 
@@ -133,7 +135,6 @@ void renderMapBorder(const vec3 &in mapSize, const vec3 &in playerPos) {
         renderSegmentedLine(topRight,   topLeft,     playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_topLineColor), S_numSegments);
     }
 
-    int step = 5;
     int tilesPerSide = 1 << step;  // 2^step
     float tileSize = actualMapSize.x / tilesPerSide;
 
@@ -182,6 +183,19 @@ void renderSegmentedLine(const vec3 &in startPos, const vec3 &in endPos, const v
     }
 }
 
+void renderTile(const vec3 &in bottomLeft, const vec3 &in topRight, const vec3 &in playerPos) {
+    nvg::BeginPath();
+    nvg::MoveTo(Camera::ToScreen(bottomLeft).xy);
+    nvg::LineTo(Camera::ToScreen(vec3(topRight.x, 8, bottomLeft.z)).xy);
+    nvg::LineTo(Camera::ToScreen(topRight).xy);
+    nvg::LineTo(Camera::ToScreen(vec3(bottomLeft.x, 8, topRight.z)).xy);
+    nvg::ClosePath();
+
+    vec4 fillColor = vec4(S_extendedBorderColor.x, S_extendedBorderColor.y, S_extendedBorderColor.z, S_extendedBorderOpacity);
+    nvg::FillColor(fillColor);
+    nvg::Fill();
+}
+
 void renderLine(const vec3 &in startPos, const vec3 &in endPos, const vec3 &in playerPos, vec4 &in lineColor) {
     vec3 startScreenPos = Camera::ToScreen(startPos);
     vec3 endScreenPos = Camera::ToScreen(endPos);
@@ -198,20 +212,6 @@ void renderLine(const vec3 &in startPos, const vec3 &in endPos, const vec3 &in p
     nvg::StrokeWidth(S_lineThickness);
     nvg::Stroke();
 }
-
-void renderTile(const vec3 &in bottomLeft, const vec3 &in topRight, const vec3 &in playerPos) {
-    nvg::BeginPath();
-    nvg::MoveTo(Camera::ToScreen(bottomLeft).xy);
-    nvg::LineTo(Camera::ToScreen(vec3(topRight.x, 8, bottomLeft.z)).xy);
-    nvg::LineTo(Camera::ToScreen(topRight).xy);
-    nvg::LineTo(Camera::ToScreen(vec3(bottomLeft.x, 8, topRight.z)).xy);
-    nvg::ClosePath();
-
-    vec4 fillColor = vec4(S_extendedBorderColor.x, S_extendedBorderColor.y, S_extendedBorderColor.z, S_extendedBorderOpacity);
-    nvg::FillColor(fillColor);
-    nvg::Fill();
-}
-
 
 vec4 getRandomColor() {
     float r = Math::Rand(0.0, 1.0);
