@@ -119,19 +119,12 @@ void onUpdateOrRenderFrame() {
 void renderMapBorder(const vec3 &in mapSize, const vec3 &in playerPos) {
     if (!S_renderBorder) return;
 
-    vec3 actualMapSize = vec3(mapSize.x * S_tileSize, 8, mapSize.z * S_tileSize);
+    vec3 actualMapSize = vec3(mapSize.x * 48, 8, mapSize.z * 48);
 
-    vec3 bottomLeft =  vec3(0, 8, 0);
+    vec3 bottomLeft = vec3(0, 8, 0);
     vec3 bottomRight = vec3(actualMapSize.x, 8, 0);
-    vec3 topLeft =     vec3(0, 8, actualMapSize.z);
-    vec3 topRight =    actualMapSize;
-
-    int borderAdjustment = S_extendBorderOutward ? S_extendedBorderSize : -S_extendedBorderSize;
-
-    vec3 extendedBottomLeft =  vec3(bottomLeft.x - borderAdjustment, 8, bottomLeft.z - borderAdjustment);
-    vec3 extendedBottomRight = vec3(bottomRight.x + borderAdjustment, 8, bottomRight.z - borderAdjustment);
-    vec3 extendedTopLeft =     vec3(topLeft.x - borderAdjustment, 8, topLeft.z + borderAdjustment);
-    vec3 extendedTopRight =    vec3(topRight.x + borderAdjustment, 8, topRight.z + borderAdjustment);
+    vec3 topLeft = vec3(0, 8, actualMapSize.z);
+    vec3 topRight = actualMapSize;
 
     if (S_renderLines) {
         renderSegmentedLine(bottomLeft, bottomRight, playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_bottomLineColor), S_numSegments);
@@ -140,17 +133,19 @@ void renderMapBorder(const vec3 &in mapSize, const vec3 &in playerPos) {
         renderSegmentedLine(topRight,   topLeft,     playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_topLineColor), S_numSegments);
     }
 
-    if (S_renderExtendedBorder) {
-        nvg::BeginPath();
-        nvg::MoveTo(Camera::ToScreen(extendedBottomLeft).xy);
-        nvg::LineTo(Camera::ToScreen(extendedBottomRight).xy);
-        nvg::LineTo(Camera::ToScreen(extendedTopRight).xy);
-        nvg::LineTo(Camera::ToScreen(extendedTopLeft).xy);
-        nvg::ClosePath();
+    int step = 5;
+    int tilesPerSide = 1 << step;  // 2^step
+    float tileSize = actualMapSize.x / tilesPerSide;
 
-        vec4 fillColor = vec4(S_extendedBorderColor.x, S_extendedBorderColor.y, S_extendedBorderColor.z, S_extendedBorderOpacity);
-        nvg::FillColor(fillColor);
-        nvg::Fill();
+    for (int x = 0; x < tilesPerSide; x++) {
+        for (int z = 0; z < tilesPerSide; z++) {
+            vec3 tileBottomLeft = vec3(x * tileSize, 8, z * tileSize);
+            vec3 tileTopRight = vec3((x + 1) * tileSize, 8, (z + 1) * tileSize);
+
+            if (S_renderExtendedBorder) {
+                renderTile(tileBottomLeft, tileTopRight, playerPos);
+            }
+        }
     }
 }
 
@@ -203,6 +198,20 @@ void renderLine(const vec3 &in startPos, const vec3 &in endPos, const vec3 &in p
     nvg::StrokeWidth(S_lineThickness);
     nvg::Stroke();
 }
+
+void renderTile(const vec3 &in bottomLeft, const vec3 &in topRight, const vec3 &in playerPos) {
+    nvg::BeginPath();
+    nvg::MoveTo(Camera::ToScreen(bottomLeft).xy);
+    nvg::LineTo(Camera::ToScreen(vec3(topRight.x, 8, bottomLeft.z)).xy);
+    nvg::LineTo(Camera::ToScreen(topRight).xy);
+    nvg::LineTo(Camera::ToScreen(vec3(bottomLeft.x, 8, topRight.z)).xy);
+    nvg::ClosePath();
+
+    vec4 fillColor = vec4(S_extendedBorderColor.x, S_extendedBorderColor.y, S_extendedBorderColor.z, S_extendedBorderOpacity);
+    nvg::FillColor(fillColor);
+    nvg::Fill();
+}
+
 
 vec4 getRandomColor() {
     float r = Math::Rand(0.0, 1.0);
