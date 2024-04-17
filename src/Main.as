@@ -104,7 +104,7 @@ void onUpdateOrRenderFrame() {
 void renderMapBorder(const vec3 &in mapSize, const vec3 &in playerPos) {
     vec3 actualMapSize = vec3(mapSize.x * 32, 8, mapSize.z * 32);
 
-    // Calculate extended border positions
+    // Extended border dimensions
     vec3 extendedBottomLeft =  vec3(-32, 8, -32);
     vec3 extendedBottomRight = vec3(actualMapSize.x + 32, 8, -32);
     vec3 extendedTopLeft =     vec3(-32, 8, actualMapSize.z + 32);
@@ -116,23 +116,29 @@ void renderMapBorder(const vec3 &in mapSize, const vec3 &in playerPos) {
     vec3 topLeft =     vec3(0, 8, actualMapSize.z);
     vec3 topRight =    actualMapSize;
 
-    if (S_renderExtendedBorder) {
-        vec4 extendedColor = vec4(S_extendedBorderColors, S_extendedBorderOpacity);
-        renderSegmentedLine(extendedBottomLeft, extendedBottomRight, playerPos, extendedColor, 4);
-        renderSegmentedLine(extendedBottomLeft, extendedTopLeft,     playerPos, extendedColor, 4);
-        renderSegmentedLine(extendedTopRight,   extendedBottomRight, playerPos, extendedColor, 4);
-        renderSegmentedLine(extendedTopRight,   extendedTopLeft,     playerPos, extendedColor, 4);
+    if (!S_renderLines) {
+        renderSegmentedLine(bottomLeft, bottomRight, playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_bottomLineColor), S_numSegments);
+        renderSegmentedLine(bottomLeft, topLeft,     playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_leftLineColor),   S_numSegments);
+        renderSegmentedLine(topRight,   bottomRight, playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_rightLineColor),  S_numSegments);
+        renderSegmentedLine(topRight,   topLeft,     playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_topLineColor),    S_numSegments);
     }
 
-    renderSegmentedLine(bottomLeft, bottomRight, playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_bottomLineColor), S_numSegments);
-    renderSegmentedLine(bottomLeft, topLeft,     playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_leftLineColor),   S_numSegments);
-    renderSegmentedLine(topRight,   bottomRight, playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_rightLineColor),  S_numSegments);
-    renderSegmentedLine(topRight,   topLeft,     playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_topLineColor),    S_numSegments);
+    if (S_renderExtendedBorder) {
+        nvg::BeginPath();
+        nvg::MoveTo(Camera::ToScreen(extendedBottomLeft).xy);
+        nvg::LineTo(Camera::ToScreen(extendedBottomRight).xy);
+        nvg::LineTo(Camera::ToScreen(extendedTopRight).xy);
+        nvg::LineTo(Camera::ToScreen(extendedTopLeft).xy);
+        nvg::ClosePath();
+
+        vec4 fillColor = S_extendedBorderColor;
+        nvg::FillColor(fillColor);
+        nvg::Fill();
+    }
 }
 
-void renderSegmentedLine(const vec3 &in startPos, const vec3 &in endPos, const vec3 &in playerPos, const vec4 &in lineColor, int baseNumSegments) {
-    if (!S_renderLines) return;
 
+void renderSegmentedLine(const vec3 &in startPos, const vec3 &in endPos, const vec3 &in playerPos, const vec4 &in lineColor, int baseNumSegments) {
     int segmentsToRender = baseNumSegments;
     float playerDistance = Math::Distance((startPos + endPos) * 0.5, playerPos);
 
