@@ -15,8 +15,8 @@ The Map Border Highlighter enhances the player's experience by clearly marking t
 
 ## ⚠️ Important Notes
 
-1. **Limitations:** The highlighter assumes standard block sizes to calculate the map borders. Mods that change block dimensions may affect accuracy.
-2. **Performance Impact:** Rendering many line segments can impact game performance on lower-end systems.
+1. **Limitations:** The highlighter assumes the map base size to calculate the map borders, if someone has hid some of the blocks, using e.g a grass remover, it will show incorrect results.
+2. **Performance Impact:** Rendering many line segments can impact game performance on lower-end systems (heck even high end ones :xdd:).
 3. **Compatibility:** Designed for the latest version of Trackmania; compatibility with future updates cannot be guaranteed.
 
 ## Prerequisites
