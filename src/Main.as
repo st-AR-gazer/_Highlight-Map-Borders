@@ -1,38 +1,44 @@
 // Settings
 
+[Setting category="General" name="Enabled"]
+bool S_enabled = true;
+
 [Setting category="General" name="Render map border"]
 bool S_renderBorder = true;
+
+[Setting category="General" name="Render map center" description="Highlights center blocks (1x1, 1x2, 2x1, 2x2)"]
+bool S_renderCenter = false;
 
 [Setting category="General" name="Render map border lines" hidden]
 bool S_renderLines = true;
 
 // Color / Line Properties
-[Setting category="General" name="Line color" description="RGBA format for color setting"]
+[Setting category="General" name="Line color" color]
 vec4 S_lineColor = vec4(1.f, 0.f, 0.f, 0.7f);
 
 [Setting category="General" name="Use same color for all lines"]
 bool S_useSameColorForAllLines = false;
 
-[Setting category="General" name="Bottom line color" description="RGBA format for bottom line color"]
+[Setting category="General" name="Bottom line color" color]
 vec4 S_bottomLineColor = vec4(1.f, 0.f, 0.f, 0.5f);
 
-[Setting category="General" name="Top line color" description="RGBA format for top line color"]
+[Setting category="General" name="Top line color" color]
 vec4 S_topLineColor = vec4(0.f, 1.f, 0.f, 0.5f);
 
-[Setting category="General" name="Left line color" description="RGBA format for left line color"]
+[Setting category="General" name="Left line color" color]
 vec4 S_leftLineColor = vec4(0.f, 0.f, 1.f, 0.5f);
 
-[Setting category="General" name="Right line color" description="RGBA format for right line color"]
+[Setting category="General" name="Right line color" color]
 vec4 S_rightLineColor = vec4(1.f, 1.f, 0.f, 0.5f);
 
 [Setting category="General" name="Line thickness"]
 float S_lineThickness = 2.0f;
 
 // Distance based opacity
-[Setting category="General" name="Distance based opacity when in round" description="Does not work when line optmization is enabled"]
+[Setting category="General" name="Distance based opacity when in round" description="Does not work when line optimization is enabled"]
 bool S_opacityWhenNoPlayer = true;
 
-[Setting category="General" name="Minimum opacity when using distance based opacity" min="0.1" max="1.0"]
+[Setting category="General" name="Minimum opacity for distance based opacity" min="0.1" max="1.0"]
 float S_minOpacity = 0.1f;
 
 [Setting category="General" name="Max distance for distance based opacity" min="0.1" max="2000.0"]
@@ -53,15 +59,15 @@ float S_optimizationThreshold = S_maxDistance;
 
 
 // Random color
-[Setting category="Random" name="Use random color for entire lines (epelepsy warning)"]
+[Setting category="Random" name="Use random color for all lines (epilepsy warning)"]
 bool S_useRandomColorForLines = false;
 
 
 vec3 playerPos;
 
 void RenderMenu() {
-    if (UI::MenuItem("\\$2ca" + Icons::SquareO + "\\$z Enable map border lines", "", S_renderBorder)) {
-        S_renderBorder = !S_renderBorder;
+    if (UI::MenuItem("\\$2ca" + Icons::SquareO + "\\$z Enable map border lines", "", S_enabled)) {
+        S_enabled = !S_enabled;
     }
 }
 
@@ -73,6 +79,8 @@ void Main() {
 }
 
 void onUpdateOrRenderFrame() {
+    if (!S_enabled || (!S_renderBorder && !S_renderCenter)) return;
+
     CTrackMania@ app = cast<CTrackMania>(GetApp());
     if (app is null) return;
 
@@ -88,20 +96,36 @@ void onUpdateOrRenderFrame() {
     if (map is null) return;
 
     vec3 mapSize = vec3(map.Size.x, 0, map.Size.z);
-    renderMapBorder(mapSize, playerPos);
+    renderMapLines(mapSize, playerPos);
 }
 
-void renderMapBorder(const vec3 &in mapSize, const vec3 &in playerPos) {
-    if (!S_renderBorder) return;
-
+void renderMapLines(const vec3 &in mapSize, const vec3 &in playerPos) {
     vec3 actualMapSize = vec3(mapSize.x * 32, 8, mapSize.z * 32);
 
-    vec3 bottomLeft = vec3(0, 8, 0);
-    vec3 bottomRight = vec3(actualMapSize.x, 8, 0);
-    vec3 topLeft = vec3(0, 8, actualMapSize.z);
-    vec3 topRight = actualMapSize;
+    if (S_renderBorder) {
+        vec3 bottomLeft = vec3(0, 8, 0);
+        vec3 bottomRight = vec3(actualMapSize.x, 8, 0);
+        vec3 topLeft = vec3(0, 8, actualMapSize.z);
+        vec3 topRight = actualMapSize;
 
-    if (S_renderLines) {
+        renderSegmentedLine(bottomLeft, bottomRight, playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_bottomLineColor), S_numSegments);
+        renderSegmentedLine(bottomLeft, topLeft,     playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_leftLineColor), S_numSegments);
+        renderSegmentedLine(topRight,   bottomRight, playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_rightLineColor), S_numSegments);
+        renderSegmentedLine(topRight,   topLeft,     playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_topLineColor), S_numSegments);
+    }
+
+    if (S_renderCenter) {
+        int halfX = int(Math::Ceil(actualMapSize.x / 2.0f));
+        int halfZ = int(Math::Ceil(actualMapSize.z / 2.0f));
+
+        int offsetX = mapSize.x % 2 == 1 ? 16 : 32;
+        int offsetZ = mapSize.z % 2 == 1 ? 16 : 32;
+
+        vec3 bottomLeft  = vec3(halfX - offsetX, 8, halfZ - offsetZ);
+        vec3 bottomRight = vec3(halfX + offsetX, 8, halfZ - offsetZ);
+        vec3 topLeft     = vec3(halfX - offsetX, 8, halfZ + offsetZ);
+        vec3 topRight    = vec3(halfX + offsetX, 8, halfZ + offsetZ);
+
         renderSegmentedLine(bottomLeft, bottomRight, playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_bottomLineColor), S_numSegments);
         renderSegmentedLine(bottomLeft, topLeft,     playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_leftLineColor), S_numSegments);
         renderSegmentedLine(topRight,   bottomRight, playerPos, S_useRandomColorForLines ? getRandomColor() : (S_useSameColorForAllLines ? S_lineColor : S_rightLineColor), S_numSegments);
