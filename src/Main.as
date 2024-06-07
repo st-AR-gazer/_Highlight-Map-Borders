@@ -44,6 +44,9 @@ float S_minOpacity = 0.1f;
 [Setting category="General" name="Max distance for distance based opacity" min="0.1" max="2000.0"]
 float S_maxDistance = 600.0f;
 
+[Setting category="General" name="Max distance for height (in blocks) to render the lines" min="1" max="100" description="Lines will not be rendered if the player is higher than this value"]
+int S_maxHeight = 100;
+
 // Optimization
 [Setting category="Optimization" name="Number of segments" min="1" max="500" description="Number of segments to split each line into. More segments = smoother lines, but more performance impact, most machines can 'handle' at least 500 segments, so that's where I've set the max, but you can override it if you want to by ctrl clicking the setting and typing in a new value manually."]
 int S_numSegments = 150;
@@ -99,8 +102,18 @@ void onUpdateOrRenderFrame() {
     renderMapLines(mapSize, playerPos);
 }
 
+bool IsPlayingMap() {
+    CTrackMania@ app = cast<CTrackMania>(GetApp());
+    if (app is null) return false;
+
+    CSmArenaClient@ playground = cast<CSmArenaClient>(app.CurrentPlayground);
+    return !(playground is null || playground.Arena.Players.Length == 0);
+}
+
 void renderMapLines(const vec3 &in mapSize, const vec3 &in playerPos) {
     vec3 actualMapSize = vec3(mapSize.x * 32, 8, mapSize.z * 32);
+
+    if (IsPlayingMap() && (playerPos.y > S_maxHeight * 8)) return;
 
     if (S_renderBorder) {
         vec3 bottomLeft = vec3(0, 8, 0);
