@@ -35,7 +35,7 @@ vec4 S_rightLineColor = vec4(1.f, 1.f, 0.f, 0.5f);
 float S_lineThickness = 2.0f;
 
 // Distance based opacity
-[Setting category="General" name="Distance based opacity when in round" description="Does not work when line optimization is enabled"]
+[Setting category="General" name="Show lines when no player is present"]
 bool S_opacityWhenNoPlayer = true;
 
 [Setting category="General" name="Minimum opacity for distance based opacity" min="0.1" max="1.0"]
@@ -102,18 +102,10 @@ void onUpdateOrRenderFrame() {
     renderMapLines(mapSize, playerPos);
 }
 
-bool IsPlayingMap() {
-    CTrackMania@ app = cast<CTrackMania>(GetApp());
-    if (app is null) return false;
-
-    CSmArenaClient@ playground = cast<CSmArenaClient>(app.CurrentPlayground);
-    return !(playground is null || playground.Arena.Players.Length == 0);
-}
-
 void renderMapLines(const vec3 &in mapSize, const vec3 &in playerPos) {
     vec3 actualMapSize = vec3(mapSize.x * 32, 8, mapSize.z * 32);
 
-    if (IsPlayingMap() && (playerPos.y > S_maxHeight * 8)) return;
+    if (_Game::IsPlayingMap() && (playerPos.y > S_maxHeight * 8)) return;
 
     if (S_renderBorder) {
         vec3 bottomLeft = vec3(0, 8, 0);
