@@ -1,5 +1,6 @@
-// Settings
+const float SENTINAL_VALUE = 6847206875.0f;
 
+// Settings
 [Setting category="General" name="Enabled"]
 bool S_enabled = true;
 
@@ -8,6 +9,9 @@ bool S_renderBorder = true;
 
 [Setting category="General" name="Render map center" description="Highlights center blocks (1x1, 1x2, 2x1, 2x2)"]
 bool S_renderCenter = false;
+
+[Setting category="General" name="Only render map center in the editor"]
+bool S_onlyRenderCenterInEditor = true;
 
 [Setting category="General" name="Render map border lines" hidden]
 bool S_renderLines = true;
@@ -89,10 +93,10 @@ void onUpdateOrRenderFrame() {
 
     auto playground = cast<CSmArenaClient>(app.CurrentPlayground);
     if (playground is null || playground.Arena.Players.Length == 0) { 
-        playerPos = vec3(6847206875.0f, 6847206875.0f, 6847206875.0f); }
+        playerPos = vec3(SENTINAL_VALUE, SENTINAL_VALUE, SENTINAL_VALUE); }
     else { 
     auto script = cast<CSmScriptPlayer>(playground.Arena.Players[0].ScriptAPI);
-    playerPos = script.Position;
+        playerPos = script.Position;
     }
 
     auto map = cast<CGameCtnChallenge@>(app.RootMap);
@@ -120,6 +124,8 @@ void renderMapLines(const vec3 &in mapSize, const vec3 &in playerPos) {
     }
 
     if (S_renderCenter) {
+        if (S_onlyRenderCenterInEditor && _Game::IsPlayingMap()) break;
+        
         int halfX = int(Math::Ceil(actualMapSize.x / 2.0f));
         int halfZ = int(Math::Ceil(actualMapSize.z / 2.0f));
 
@@ -198,7 +204,7 @@ vec4 getRandomColor() {
 }
 
 float calculateOpacity(const vec3 &in segmentStart, const vec3 &in segmentEnd, const vec3 &in playerPos) {
-    if (playerPos.x == 6847206875.0f && playerPos.y == 6847206875.0f && playerPos.z == 6847206875.0f && S_opacityWhenNoPlayer) {
+    if (playerPos.x == SENTINAL_VALUE && playerPos.y == SENTINAL_VALUE && playerPos.z == SENTINAL_VALUE && S_opacityWhenNoPlayer) {
         return 0.85f;
     }
 
